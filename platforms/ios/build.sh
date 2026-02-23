@@ -45,11 +45,9 @@ fi
 if [ "$(uname -s)" = "Darwin" ]; then
     ar="${AR:-ar}"
     ranlib="${RANLIB:-ranlib}"
-    strip='strip'
 else
     ar="${AR:-"llvm-ar"}"
     ranlib="${RANLIB:-"llvm-ranlib"}"
-    strip='cctools-strip'
 fi
 
 for var in ar ranlib; do
@@ -124,10 +122,10 @@ if [ -n "$outdated_toolchain" ]; then
     mv ld64/src/ld/ld ../../toolchain/bin/ld64.ld64
     make -C libmacho -j"$ncpus"
     make -C libstuff -j"$ncpus"
-    make -C misc strip lipo
+    make -C misc strip lipo -j"$ncpus"
     strip misc/strip misc/lipo
-    cp misc/strip ../../toolchain/bin/cctools-strip
-    cp misc/lipo ../../toolchain/bin/lipo
+    mv misc/strip ../../toolchain/bin/cctools-strip
+    mv misc/lipo ../../toolchain/bin/lipo
     cd ../..
     rm -rf "cctools-port-$cctools_commit"
 
@@ -199,7 +197,7 @@ for target in $targets; do
 done
 
 lipo -create build-*/"$bin" -output "$bin"
-[ -z "$DEBUG" ] && [ -z "$NOSTRIP" ] && "$strip" -no_code_signature_warning "$bin"
+[ -z "$DEBUG" ] && [ -z "$NOSTRIP" ] && cctools-strip -no_code_signature_warning "$bin"
 if command -v ldid >/dev/null; then
     ldid -S"$entitlements" "$bin"
 else
