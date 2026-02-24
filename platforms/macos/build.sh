@@ -66,6 +66,22 @@ else
     ncpus="$(sysctl -n hw.ncpu)"
 fi
 
+if [ "$(uname -s)" = "Darwin" ]; then
+    ar="${AR:-ar}"
+    ranlib="${RANLIB:-ranlib}"
+else
+    ar="${AR:-"llvm-ar"}"
+    ranlib="${RANLIB:-"llvm-ranlib"}"
+fi
+
+for var in ar ranlib; do
+    dep="$(eval "echo \$$var")"
+    if ! command -v "$dep" >/dev/null; then
+        printf '%s not found!\n' "$dep"
+        exit 1
+    fi
+done
+
 for dep in "${CLANG:-clang}" make cmake; do
     if ! command -v "$dep" >/dev/null; then
         printf '%s not found!\n' "$dep"
@@ -155,7 +171,6 @@ if [ -n "$outdated_toolchain" ]; then
     make -C ar
     strip ar/ar
     mv ar/ar ../../toolchain/bin/cctools-ar
-
     cd ../..
     rm -rf "cctools-port-$cctools_commit"
 
@@ -183,7 +198,7 @@ fi
 
 # Increase this if we ever make a change to the toolchain, for example
 # using a newer GCC version, and we need to invalidate the cache.
-ppctoolchainver=1
+ppctoolchainver=2
 ppc_triple='powerpc-apple-darwin8'
 targets="$targets $ppc_triple"
 if [ "$(cat toolchain-ppc/toolchainver 2>/dev/null)" != "$ppctoolchainver" ]; then
@@ -202,7 +217,7 @@ if [ "$(cat toolchain-ppc/toolchainver 2>/dev/null)" != "$ppctoolchainver" ]; th
 
     cd "cctools-port-$cctools_commit/cctools"
     ./configure \
-        --target="$ppc_triple" \
+        --target=ppc \
         --enable-silent-rules \
         --with-llvm-config=false \
         CC=remcpe-clang \
@@ -218,7 +233,6 @@ if [ "$(cat toolchain-ppc/toolchainver 2>/dev/null)" != "$ppctoolchainver" ]; th
     make -C as/ppc -j"$ncpus"
     strip as/ppc/ppc-as
     mv as/ppc/ppc-as ../../toolchain-ppc/bin/ppc-as
-
     cd ../..
     rm -rf "cctools-port-$cctools_commit"
 
@@ -237,9 +251,9 @@ if [ "$(cat toolchain-ppc/toolchainver 2>/dev/null)" != "$ppctoolchainver" ]; th
         --prefix="$workdir/toolchain-ppc" \
         --target="$ppc_triple" \
         --disable-multilib \
-        --enable-lto \
+        --disable-nls \
         --with-system-zlib \
-        --enable-languages=c,c++,objc,lto \
+        --enable-languages=c,c++,objc \
         --with-sysroot="$old_sdk" \
         --with-as="$(command -v ppc-as)" \
         --with-ld="$(command -v ppc-ld)" \
@@ -247,13 +261,15 @@ if [ "$(cat toolchain-ppc/toolchainver 2>/dev/null)" != "$ppctoolchainver" ]; th
         RANLIB_FOR_TARGET="$(command -v cctools-ranlib)" \
         NM_FOR_TARGET="$(command -v ppc-nm)" \
         LIPO_FOR_TARGET="$(command -v lipo)" \
+        STRIP_FOR_TARGET="$(command -v ppc-strip)" \
         "$@"
     make -j"$ncpus"
-    make -j"$ncpus" install
+    make -j"$ncpus" install-strip
     cd ../..
     rm -rf "gcc-$gcc_version"
 
     printf '%s' "$ppctoolchainver" > toolchain-ppc/toolchainver
+    outdated_ppc_toolchain=1
 fi
 
 # checks if the linker we build successfully linked with LLVM and supports LTO,
@@ -277,7 +293,10 @@ fi
 # Delete old build files if build settings change or if the SDK changes.
 printf '%s\n' "$DEBUG" > buildsettings
 clang -v >> buildsettings 2>&1
-if [ -n "$outdated_sdk" ] || ! cmp -s buildsettings lastbuildsettings; then
+if [ -n "$outdated_sdk" ] ||
+    [ -n "$outdated_toolchain" ] ||
+    [ -n "$outdated_ppc_toolchain" ] ||
+    ! cmp -s buildsettings lastbuildsettings; then
     rm -rf build-*
 fi
 mv buildsettings lastbuildsettings
@@ -292,8 +311,10 @@ for target in $targets; do
     arch="${target%%-*}"
     cc="$platformdir/macos-cc"
     cxx="$platformdir/macos-c++"
+    target_ar="$ar"
+    target_ranlib="$ranlib"
     case $arch in
-        (i386|powerpc*)
+        (i386|powerpc*|ppc*)
             if [ "$arch" = 'i386' ]; then
                 target_cflags="$cflags -march=pentium-m"
                 set -- -DCMAKE_EXE_LINKER_FLAGS='-framework IOKit -framework Carbon -framework AudioUnit -undefined dynamic_lookup'
@@ -301,6 +322,8 @@ for target in $targets; do
                 target_cflags=
                 cc="$target-gcc"
                 cxx="$target-g++"
+                target_ar="cctools-ar"
+                target_ranlib="cctools-ranlib"
                 set -- -DCMAKE_EXE_LINKER_FLAGS='-framework IOKit -framework Carbon -framework AudioUnit -static-libgcc'
             fi
             export REMCPE_SDK="$old_sdk"
@@ -318,11 +341,7 @@ for target in $targets; do
                 if [ -n "$DEBUG" ]; then
                     opt='-O0'
                 else
-                    if [ "$arch" = 'i386' ]; then
-                        opt='-O2'
-                    else
-                        opt='-O2 -flto'
-                    fi
+                    opt='-O2'
                 fi
                 if [ "$arch" != 'i386' ]; then
                     sed -e 's/-fpascal-strings//g' configure > configure.patched
@@ -339,8 +358,8 @@ for target in $targets; do
                     CFLAGS="$opt $target_cflags" \
                     CXXFLAGS="$opt $target_cflags" \
                     CPPFLAGS='-DNDEBUG' \
-                    AR=cctools-ar \
-                    RANLIB=cctools-ranlib
+                    AR="$target_ar" \
+                    RANLIB="$target_ranlib"
                 make -j"$ncpus"
                 make install -j"$ncpus"
                 cd ..
@@ -376,8 +395,8 @@ for target in $targets; do
         -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=ONLY \
         -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
         -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
-        -DCMAKE_AR="$(command -v cctools-ar)" \
-        -DCMAKE_RANLIB="$(command -v cctools-ranlib)" \
+        -DCMAKE_AR="$(command -v "$target_ar")" \
+        -DCMAKE_RANLIB="$(command -v "$target_ranlib")" \
         -DCMAKE_C_COMPILER="$cc" \
         -DCMAKE_CXX_COMPILER="$cxx" \
         -DCMAKE_FIND_ROOT_PATH="$REMCPE_SDK/usr;$PWD/sdl" \
