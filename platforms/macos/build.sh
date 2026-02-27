@@ -2,6 +2,7 @@
 # shellcheck disable=2086
 set -e
 
+# cd to the directory this script is in
 [ "${0%/*}" = "$0" ] && scriptroot="." || scriptroot="${0%/*}"
 cd "$scriptroot"
 
@@ -52,7 +53,7 @@ if ! [ -d "$x86_64_sdk" ] || ! [ -d "$arm64_sdk" ] || ! [ -d "$old_sdk" ] || [ "
     mv MacOSX10.5.sdk "$old_sdk"
     # patch the sdk to fix a bug
     cd "$old_sdk"
-    patch -p1 < "$platformdir/leopard-sdk-fix.patch"
+    patch -fNp1 < "$platformdir/leopard-sdk-fix.patch"
     )
     wait
     rm ./*.tar.bz2 ./*.tar.xz
@@ -268,6 +269,7 @@ if [ "$(cat toolchain-ppc/toolchainver 2>/dev/null)" != "$ppctoolchainver" ]; th
     cd ../..
     rm -rf "gcc-$gcc_version"
 
+    rm -rf toolchain-ppc/share
     printf '%s' "$ppctoolchainver" > toolchain-ppc/toolchainver
     outdated_ppc_toolchain=1
 fi
@@ -405,7 +407,7 @@ for target in $targets; do
         -DCMAKE_CXX_FLAGS="$target_cflags" \
         -DWERROR="${WERROR:-OFF}" \
         "$@"
-    make -j"$ncpus"
+    cmake --build . --parallel "$ncpus"
 
     cd ..
 done

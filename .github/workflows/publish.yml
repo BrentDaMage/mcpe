@@ -10,11 +10,18 @@ jobs:
             fail-fast: false
             matrix:
                 include:
-                  - name: SDL 2
+                  - name: x86_64 SDL 2
                     flags: '-DREMCPE_PLATFORM=sdl2 -DREMCPE_GFX_API=OGL'
                     packages: 'libsdl2-dev'
+                    runner: ubuntu-24.04
+                    arch: x86_64
+                  - name: aarch64 SDL 2
+                    flags: '-DREMCPE_PLATFORM=sdl2 -DREMCPE_GFX_API=OGL'
+                    packages: 'libsdl2-dev'
+                    runner: ubuntu-24.04-arm
+                    arch: aarch64
         name: Linux (${{ matrix.name }})
-        runs-on: ubuntu-24.04
+        runs-on: ${{ matrix.runner }}
         steps:
           - name: Checkout Repository
             uses: actions/checkout@v6
@@ -43,12 +50,51 @@ jobs:
             run: |
                 mkdir ReMCPE
                 mv game/assets build/reminecraftpe ReMCPE
-                tar -czf ReMCPE-Linux-x86_64.tar.gz ReMCPE
+                tar -czf ReMCPE-Linux-${{ matrix.arch }}.tar.gz ReMCPE
           - uses: alexellis/upload-assets@0.4.1
             env:
               GITHUB_TOKEN: ${{ github.token }}
             with:
-              asset_paths: '["ReMCPE-Linux-x86_64.tar.gz"]'
+              asset_paths: '["ReMCPE-Linux-${{ matrix.arch }}.tar.gz"]'
+
+    # flatpak:
+    #     strategy:
+    #         fail-fast: false
+    #         matrix:
+    #             include:
+    #               - name: x86_64 SDL 2
+    #                 gfx: OGL
+    #                 arch: x86_64
+    #                 runner: ubuntu-24.04
+    #               - name: aarch64 SDL 2
+    #                 gfx: OGL
+    #                 arch: aarch64
+    #                 runner: ubuntu-24.04-arm
+    #     name: Flatpak (${{ matrix.name }})
+    #     runs-on: ${{ matrix.runner }}
+    #     steps:
+    #       - name: Checkout Repository
+    #         uses: actions/checkout@v6
+    #         with:
+    #             submodules: true
+    #       - name: Install Dependencies
+    #         run: |
+    #             sudo apt-get update
+    #             sudo apt-get install --no-install-recommends -y flatpak
+    #             flatpak --user remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+    #             flatpak --user install -y \
+    #                 org.freedesktop.Platform/${{ matrix.arch }}/25.08 \
+    #                 org.freedesktop.Sdk/${{ matrix.arch }}/25.08
+    #       - name: Build
+    #         run: ./platforms/linux/build-flatpak.sh
+    #         env:
+    #           ARCH: ${{ matrix.arch }}
+    #           REMCPE_GFX_API: ${{ matrix.gfx }}
+    #       - uses: alexellis/upload-assets@0.4.1
+    #         env:
+    #           GITHUB_TOKEN: ${{ github.token }}
+    #         with:
+    #           asset_paths: '["platforms/linux/build-flatpak/ReMCPE-Linux-${{ matrix.arch }}.flatpak"]'
 
     # linux32:
     #     strategy:

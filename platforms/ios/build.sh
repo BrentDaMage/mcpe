@@ -2,6 +2,7 @@
 # shellcheck disable=2086
 set -e
 
+# cd to the directory this script is in
 [ "${0%/*}" = "$0" ] && scriptroot="." || scriptroot="${0%/*}"
 cd "$scriptroot"
 
@@ -191,7 +192,7 @@ for target in $targets; do
         -DCMAKE_C_FLAGS="$cflags" \
         -DCMAKE_CXX_FLAGS="$cflags" \
         -DWERROR="${WERROR:-OFF}"
-    make -j"$ncpus"
+    cmake --build . --parallel "$ncpus"
 
     cd ..
 done
