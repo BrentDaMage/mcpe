@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 #include "compat/LegacyCPP.hpp"
 #include "renderer/hal/enums/BufferType.hpp"
 
@@ -9,6 +11,7 @@ namespace mce
 	class BufferBase
 	{
 	public:
+        int8_t* m_clientData;
         BufferType m_bufferType;
         unsigned int m_stride;
         unsigned int m_count;
@@ -18,6 +21,11 @@ namespace mce
 	protected:
 		void _init(BufferBase& other);
 		void _move(BufferBase& other);
+        void _createClientBuffer(RenderContext& context, const void* data, BufferType bufferType);
+        void _bindClientBuffer(RenderContext& context);
+        void _resizeClientBuffer(RenderContext& context, const void* data, unsigned int size);
+        void _updateClientBuffer(RenderContext& context, unsigned int stride, void*& data, unsigned int count);
+        bool _isClientBuffer() const { return m_clientData != nullptr; }
 
 	public:
         BufferBase();
