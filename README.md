@@ -114,6 +114,59 @@ This fetches the project's necessary dependencies.
 
 ### Windows
 
+There are 2 ways to build on Windows, the universal build script or Visual Studio.
+
+#### MinGW cross build script
+
+There is a script to easily build a version of NBCraft that works on all versions of Windows since 95.
+
+You will need to install the following dependencies
+
+##### Dependencies (Ubuntu/Debian)
+
+- `build-essential` (C/C++ Toolchain)
+- `cmake` (CMake)
+- `make` (GNU Make)
+- `wget` (Wget)
+- `zlib1g-dev` (ZLib)
+- `libgmp-dev libmpfr-dev libmpc-dev` (GCC dependencies)
+
+##### Dependencies (macOS)
+
+- Xcode command line tools
+- `cmake` (CMake)
+- `wget` (Wget)
+- `gmp mpfr mpc` (GCC dependencies)
+
+Then run
+
+```sh
+# to build for 64 bit machines
+export ARCH=x86_64
+# to build for pentium pro or newer
+export ARCH=i686
+# CPUs older than the pentium pro will likely have unplayable performance but will build.
+# to build for pentium or newer
+export ARCH=i586
+# to build for i486 or newer
+export ARCH=i486
+
+# (macOS only) if gmp, mpfr, and mpc were installed from homebrew
+export GMP="$(brew --prefix)"
+export MPFR="$(brew --prefix)"
+export MPC="$(brew --prefix)"
+# (macOS only) if gmp, mpfr, and mpc were installed from macports
+export GMP='/opt/local'
+export MPFR='/opt/local'
+export MPC='/opt/local'
+
+./platforms/windows/build.sh
+```
+
+An executable and assets folder will be placed at platforms/windows/build/NBCraft
+
+#### Visual Studio
+
 The project is configured to target Windows XP by default by using "v141_xp" build tools. If you would like
 to build with Windows XP support, please follow the guide [here](https://learn.microsoft.com/en-us/cpp/build/configuring-programs-for-windows-xp?view=msvc-170#install-the-windows-xp-platform-toolset)
 to obtain the build tools via the Visual Studio installer.
@@ -182,7 +235,7 @@ You can build with CMake as detailed in the Unix-like systems section above.  Yo
 
 #### Universal build script
 
-There is a script to easily create a version of NBCraft that works on all versions of macOS since 10.4 tiger, and on PowerPC.
+There is a script to easily build a version of NBCraft that works on all versions of macOS since 10.4 tiger, and on PowerPC.
 
 You will need to install the following dependencies, in addition to the Xcode command line tools:
 

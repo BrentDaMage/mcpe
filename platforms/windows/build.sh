@@ -44,8 +44,10 @@ if [ "$(cat "toolchain-$arch/toolchainver" 2>/dev/null)" != "$toolchainver" ]; t
         (x86_64)
             winnt=0x0501 # Windows XP
         ;;
-        (arm64)
-            winnt=0x0A00 # Windows 10
+        (arm64|aarch64)
+            printf 'aarch64 builds are currently unsupported.\n'
+            exit 1
+            # winnt=0x0A00 # Windows 10
         ;;
         (*)
             printf 'Unknown architecture!\n'
@@ -64,8 +66,7 @@ if [ "$(cat "toolchain-$arch/toolchainver" 2>/dev/null)" != "$toolchainver" ]; t
     ./configure \
         --prefix="$workdir/toolchain-$arch" \
         --target="$target" \
-        --disable-multilib \
-        CFLAGS='-Wno-discarded-qualifiers'
+        --disable-multilib
     make -j"$ncpus"
     make -j"$ncpus" install-strip
     cd ..
@@ -78,7 +79,7 @@ if [ "$(cat "toolchain-$arch/toolchainver" 2>/dev/null)" != "$toolchainver" ]; t
     cd "mingw-w64-v$mingw_version/mingw-w64-headers"
     ./configure \
         --host="$target" \
-        --prefix="$workdir/toolchain-$arch/$arch-w64-mingw32" \
+        --prefix="$workdir/toolchain-$arch/$target" \
         --with-default-win32-winnt="$winnt" \
         --with-default-msvcrt=msvcrt-os
     make -j"$ncpus" install
@@ -116,7 +117,7 @@ if [ "$(cat "toolchain-$arch/toolchainver" 2>/dev/null)" != "$toolchainver" ]; t
     cd "mingw-w64-v$mingw_version/mingw-w64-crt"
     ./configure \
         --host="$target" \
-        --prefix="$workdir/toolchain-$arch/$arch-w64-mingw32" \
+        --prefix="$workdir/toolchain-$arch/$target" \
         --with-default-win32-winnt="$winnt" \
         --with-default-msvcrt=msvcrt-os
     make -j1
