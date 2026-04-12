@@ -92,7 +92,8 @@ Then, copy the assets (including sounds and textures) into the "minecraft" resou
 	   pack.png
 	   particles.png
 	   terrain.png
-	   ```<br>
+	   ```
+	   <br>
    - Any Pocket Edition assets will need to be manually extracted from _Pocket Edition_.
    - **To retrieve the sounds**, locate the `resources` directory in the `.minecraft` folder
      - Copy the contents (e.g. `music`, `sound`, etc.) into the `game/assets/resource_packs/minecraft` directory of the project.
