@@ -49,7 +49,7 @@ BufferD3D9::~BufferD3D9()
     releaseBuffer();
 }
 
-void BufferD3D9::_createBuffer(RenderContext& context, unsigned int stride, const void* data, unsigned int count, BufferType bufferType, bool isDynamic)
+void BufferD3D9::_createBuffer(RenderContext& context, unsigned int stride, ByteBuffer& data, unsigned int count, BufferType bufferType, bool isDynamic)
 {
     D3DDevice d3dDevice = context.getD3DDevice();
     DWORD usage = isDynamic ? D3DUSAGE_DYNAMIC : 0x0;
@@ -97,8 +97,7 @@ void BufferD3D9::_createBuffer(RenderContext& context, unsigned int stride, cons
 
     if (data)
     {
-        void* pData = (void*)data;
-        updateBuffer(context, stride, pData, count);
+        updateBuffer(context, stride, data, count);
     }
 }
 
@@ -143,25 +142,25 @@ void BufferD3D9::bindBuffer(RenderContext& context)
     }
 }
 
-void BufferD3D9::createBuffer(RenderContext& context, unsigned int stride, const void *data, unsigned int count, BufferType bufferType)
+void BufferD3D9::createBuffer(RenderContext& context, unsigned int stride, ByteBuffer& data, unsigned int count, BufferType bufferType)
 {
     BufferBase::createBuffer(context, stride, data, count, bufferType);
     _createBuffer(context, stride, data, count, bufferType, false);
 }
 
-void BufferD3D9::createDynamicBuffer(RenderContext& context, unsigned int stride, const void* data, unsigned int count, BufferType bufferType)
+void BufferD3D9::createDynamicBuffer(RenderContext& context, unsigned int stride, ByteBuffer& data, unsigned int count, BufferType bufferType)
 {
     BufferBase::createDynamicBuffer(context, stride, data, count, bufferType);
     _createBuffer(context, stride, data, count, bufferType, true);
 }
 
-void BufferD3D9::resizeBuffer(RenderContext& context, const void* data, unsigned int size)
+void BufferD3D9::resizeBuffer(RenderContext& context, ByteBuffer& data, unsigned int size)
 {
     LOG_E("BufferD3D9::resizeBuffer() not implemented");
     throw std::bad_cast();
 }
 
-void BufferD3D9::updateBuffer(RenderContext& context, unsigned int stride, void*& data, unsigned int count, MapType mapType)
+void BufferD3D9::updateBuffer(RenderContext& context, unsigned int stride, ByteBuffer& data, unsigned int count, MapType mapType)
 {
     if (m_internalSize < stride * count)
     {
@@ -187,7 +186,7 @@ void BufferD3D9::updateBuffer(RenderContext& context, unsigned int stride, void*
     }
 
     // 360 requires that we lock the entire buffer
-    memcpy((int8_t*)pData + m_bufferOffset, data, stride * count);
+    memcpy((int8_t*)pData + m_bufferOffset, data.getData(), stride * count);
  
     switch (m_bufferType)
     {
